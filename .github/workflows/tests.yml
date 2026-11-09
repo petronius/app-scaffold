@@ -1,0 +1,54 @@
+name: Tests
+
+# Manual only. Nothing here fires on a push or a pull request: the tests run
+# locally before every merge (Scripts/test.sh), and this workflow is for
+# asking a runner for the same verdict on demand. Add `push:` or
+# `pull_request:` triggers here if the project wants them.
+on:
+  workflow_dispatch:
+
+concurrency:
+  # Queue runs rather than cancelling them. Each run is someone asking for a
+  # verdict on a ref, so an in-flight one is left to finish.
+  group: tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Core, copy, app and watch
+    runs-on: macos-15
+    env:
+      # The knob a runner-image change is most likely to break. The pick is
+      # best effort: when this Xcode is absent the step lists what is there.
+      XCODE_VERSION: "26.3"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore the SwiftPM build
+        # Keyed on the dependency lockfile with the commit last, so every
+        # run saves its incremental build for the next.
+        uses: actions/cache@v4
+        with:
+          path: Core/.build
+          key: spm-macos-xcode${{ env.XCODE_VERSION }}-${{ hashFiles('Core/Package.swift', 'Core/Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            spm-macos-xcode${{ env.XCODE_VERSION }}-${{ hashFiles('Core/Package.swift', 'Core/Package.resolved') }}-
+            spm-macos-xcode${{ env.XCODE_VERSION }}-
+
+      - name: Select Xcode and report the environment
+        run: |
+          APP="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ -d "$APP" ]; then
+            sudo xcode-select -s "$APP"
+          else
+            echo "Xcode ${XCODE_VERSION} is not on this image. Using the default:"
+            ls /Applications | grep -i '^Xcode' || true
+          fi
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Every suite
+        run: Scripts/test.sh "$RUNNER_TEMP/dd"

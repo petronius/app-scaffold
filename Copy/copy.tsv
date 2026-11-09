@@ -1,0 +1,47 @@
+key	text	params	where	notes
+app.name	Scaffold		Home screen, watch app title, widget gallery
+tab.items	Items		Tab bar and iPad sidebar; the Items list's title
+tab.library	Library		Tab bar and iPad sidebar; the Library's title
+tab.settings	Settings		Tab bar and iPad sidebar; the Settings title
+action.add	Add		Bar button on the Items list
+action.cancel	Cancel		Bar button on the item editor
+action.save	Save		Bar button on the item editor
+action.done	Done		Bar button on a sheet
+action.edit	Edit		Bar button on an item's detail
+action.delete	Delete		Swipe action on an item row; button on the detail
+action.syncNow	Sync now		Settings, iCloud section
+action.clearSearch	Clear search		Accessibility label of the Library search field's clear button
+figure.noValue	–		In place of a figure that cannot be worked out	The en dash is a mark, not punctuation
+items.empty.title	No items		Items list with nothing in it
+items.empty.message	Add one with the plus button. It syncs to your other devices through iCloud.		Items list with nothing in it
+items.select	Select an item		iPad detail column with nothing selected
+item.untitled	Untitled		An item whose title is blank
+item.created	Created {day}	day:String	Item detail, under the title
+item.count.one	1 item		Widget, complication
+item.count.other	{count} items	count:String	Widget, complication
+editor.new	New item		Item editor title when adding
+editor.edit	Edit item		Item editor title when editing
+editor.field.title	Title		Item editor field label
+editor.field.notes	Notes		Item editor field label
+delete.confirm	Delete this item on all your devices?		Confirmation on the detail's Delete button
+sync.header	iCloud		Settings section header
+sync.toggle	Sync with iCloud		Settings toggle
+sync.footer	Your items stay on this device and sync through your own iCloud account. Nothing goes to any other server.		Settings, iCloud section footer
+sync.status.label	Status		Settings, iCloud section
+sync.status.off	Off		Sync status
+sync.status.noAccount	No iCloud account		Sync status
+sync.status.syncing	Syncing		Sync status
+sync.status.waiting	Waiting for the first sync		Sync status
+sync.status.synced	Synced at {time}	time:String	Sync status
+sync.status.failed	Sync failed: {reason}	reason:String	Sync status	reason is CloudKit's own message
+sync.status.deletedInICloud	Your iCloud data was deleted. Turn sync on to upload this device's items again.		Sync status after the user deleted the app's iCloud data
+about.header	About		Settings section header
+about.version	Version		Settings, About
+about.build	Build		Settings, About
+library.search.label	Search the Library		Accessibility label of the Library search field
+library.search.placeholder	Search		Library search field prompt
+library.search.empty	No articles match “{query}”	query:String	Library with a search that matches nothing
+library.article.missing	This article is not in this build.		An article link to a file the app does not bundle
+library.info.label	About {title}	title:String	Accessibility label of an InfoButton
+widget.description	The number of items and the newest ones.		Widget gallery
+watch.empty	No items yet		Watch app with nothing in it

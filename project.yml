@@ -1,0 +1,264 @@
+name: Scaffold
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "18.0"
+    watchOS: "11.0"
+  createIntermediateGroups: true
+# Project-wide so the app, the watch app and every extension stamp the same
+# version. App Store Connect warns when an embedded bundle's version differs
+# from its host, and Scripts/testflight.sh overrides CURRENT_PROJECT_VERSION
+# for every target at once.
+settings:
+  base:
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    # Your Apple developer team id (Scripts/rename.sh sets it). Simulator
+    # builds signed ad hoc (Scripts/build.sh) work without one.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+packages:
+  AppCore:
+    path: Core
+schemes:
+  Scaffold:
+    build:
+      targets:
+        Scaffold: all
+        ScaffoldTests: [test]
+    test:
+      targets: [ScaffoldTests]
+  ScaffoldWatch:
+    build:
+      targets:
+        ScaffoldWatch: all
+targets:
+  # The iPhone and iPad app, one target: compact width is the phone layout,
+  # regular width the sidebar and split columns.
+  Scaffold:
+    type: application
+    platform: iOS
+    sources:
+      - App/Sources
+      - App/Assets.xcassets
+      # The store, the sync host, the identifiers and the fixture, shared
+      # with the watch app.
+      - Shared/Sources
+      # The Library, as a folder reference: an article added under docs/
+      # ships with no project.yml edit. Nothing else Markdown is bundled;
+      # spec/ and SPEC.md are internal.
+      - path: docs
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: AppCore
+        product: AppCore
+      - package: AppCore
+        product: AppText
+      - package: AppCore
+        product: AppData
+      - package: AppCore
+        product: AppSync
+      - target: ScaffoldWidget
+      # Embedded, never linked, and copied where Xcode's own "Embed Watch
+      # Content" phase puts it: under the host's Watch/ subpath. App Store
+      # Connect rejects any other location (code 90680).
+      - target: ScaffoldWatch
+        embed: true
+        link: false
+        copy:
+          destination: productsDirectory
+          subpath: "$(CONTENTS_FOLDER_PATH)/Watch"
+    # xcodegen rewrites the entitlements file from this list on every
+    # generate, so a key added only to the .entitlements file disappears.
+    # Each capability must also be enabled on the App ID in the developer
+    # portal (README.md, "First run").
+    entitlements:
+      path: App/Scaffold.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.example.scaffold
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.example.scaffold
+        # Silent pushes behind CKSyncEngine's subscription: another device's
+        # save wakes this one to fetch. Xcode rewrites the value to
+        # production for distribution builds.
+        aps-environment: development
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Scaffold
+        # Track the build settings so testflight.sh's CURRENT_PROJECT_VERSION
+        # stamp reaches the shipped plist. A literal here would never be
+        # substituted, and App Store Connect would refuse the second upload
+        # as a duplicate.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIBackgroundModes: [remote-notification]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # iPad: all four orientations and no full-screen requirement, so the
+        # app joins Split View; a narrow split gets the compact layout.
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # Standard HTTPS only, which is exempt from export compliance, so the
+        # question is answered once here rather than on every upload.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.scaffold
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The accent from the asset catalogue, so Color.accentColor and every
+        # untinted control resolve to it in any view tree.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # The home screen and Lock Screen widget. Reads the app's store, read-only,
+  # from the App Group container.
+  ScaffoldWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget/Sources
+      - Widget/Assets.xcassets
+      - WidgetShared/Sources
+      - Shared/Sources/AppIdentifiers.swift
+      - Shared/Sources/Fixture.swift
+    dependencies:
+      - package: AppCore
+        product: AppCore
+      - package: AppCore
+        product: AppText
+      - package: AppCore
+        product: AppData
+    entitlements:
+      path: Widget/ScaffoldWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.example.scaffold
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Scaffold
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.scaffold.widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SKIP_INSTALL: "YES"
+
+  # The watch app: a single-target SwiftUI watchOS app, embedded in the phone
+  # app. A plain application built for watchOS; the legacy watchapp2 type
+  # carries the old app-plus-extension packaging, which makes the archive
+  # produce the watch binary twice. It syncs through iCloud on its own, so it
+  # works with the phone out of reach.
+  ScaffoldWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - WatchApp/Sources
+      - WatchApp/Assets.xcassets
+      - Shared/Sources
+    dependencies:
+      - package: AppCore
+        product: AppCore
+      - package: AppCore
+        product: AppText
+      - package: AppCore
+        product: AppData
+      - package: AppCore
+        product: AppSync
+      - target: ScaffoldWatchWidget
+    entitlements:
+      path: WatchApp/ScaffoldWatch.entitlements
+      properties:
+        # Shared with the complication: the watch app writes the store
+        # there, the complication reads it.
+        com.apple.security.application-groups:
+          - group.com.example.scaffold
+        # The same container as the phone's; the watch's App ID must enable
+        # it too.
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.example.scaffold
+        aps-environment: development
+    info:
+      path: WatchApp/Info.plist
+      properties:
+        CFBundleDisplayName: Scaffold
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.example.scaffold
+        WKBackgroundModes: [remote-notification]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.scaffold.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # The watch app ships inside the phone app, never on its own.
+        # XcodeGen sets this for extensions but not for applications.
+        SKIP_INSTALL: "YES"
+
+  # The watch complication, embedded in the watch app.
+  ScaffoldWatchWidget:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - WatchWidget/Sources
+      - WidgetShared/Sources
+      - Shared/Sources/AppIdentifiers.swift
+      - Shared/Sources/Fixture.swift
+    dependencies:
+      - package: AppCore
+        product: AppCore
+      - package: AppCore
+        product: AppText
+      - package: AppCore
+        product: AppData
+    entitlements:
+      path: WatchWidget/ScaffoldWatchWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.example.scaffold
+    info:
+      path: WatchWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Scaffold
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.scaffold.watchkitapp.widget
+        TARGETED_DEVICE_FAMILY: "4"
+        SKIP_INSTALL: "YES"
+
+  # Logic tests for the app target's own types (launch options, the
+  # Library), hosted in the app. The core's tests run with `swift test` in
+  # Core/.
+  ScaffoldTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [App/Tests]
+    dependencies:
+      - target: Scaffold
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Scaffold.app/Scaffold
