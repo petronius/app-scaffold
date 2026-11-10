@@ -15,8 +15,8 @@
 # A scope (`feat(tuner): ...`) is allowed and not shown. Merge commits and
 # this script's own `chore(release)` commits are skipped. Commits made before
 # the convention are classified in Scripts/release-notes-history.tsv (full
-# sha, then feat, fix or internal, then the line), which wins over the
-# subject. Any other subject without a type counts as maintenance, and the
+# sha, then feat, fix, internal or release, then the line), which wins over
+# the subject; a release commit is skipped like a `chore(release)` one. Any other subject without a type counts as maintenance, and the
 # script names it so the gap is seen.
 #
 #   release-notes.sh preview
@@ -41,8 +41,9 @@
 #       timestamp needs no upload time; the article then takes its date.
 #       Each build is tagged at the last commit on main before it was built:
 #       the build number's own UTC minute where the number is a timestamp,
-#       else its upload time. Then every build gets its article, and the
-#       commit and the tags are pushed.
+#       else its upload time. Then every build tagged here gets its article,
+#       replacing one written before it had a tag, and the commit and the
+#       tags are pushed.
 #
 # Written for the bash 3.2 and BSD tools macOS ships, and for Linux.
 set -euo pipefail
@@ -111,6 +112,7 @@ classify() {
             if (index(subject, release) == 1) next
             if (sha in kind) {
                 k = kind[sha]
+                if (k == "release") next
                 if (k == "feat" || k == "fix") print k, text[sha]
                 else print "other", ""
                 next
@@ -256,7 +258,7 @@ publish() {
 }
 
 backfill() {
-    local source="${1:-}" list main firsts line build epoch when sha prev="" count=0 version
+    local source="${1:-}" list main firsts build epoch when sha tagged prev="" count=0 version
     if [ -z "$source" ]; then
         echo "==> Fetching the uploaded builds from App Store Connect"
         list=$(Scripts/asc-builds.sh) || die "Could not read the builds from App Store Connect."
@@ -285,9 +287,11 @@ backfill() {
     fi
 
     while read -r when epoch build; do
+        tagged=""
         if sha=$(git rev-parse -q --verify "refs/tags/$TAG_PREFIX$build^{commit}"); then
             :
         else
+            tagged=yes
             sha=$(printf '%s\n' "$firsts" | awk -v t="$when" '$2 <= t { print $1; exit }')
             if [ -z "$sha" ]; then
                 echo "!!  Build $build predates every commit on main; left out." >&2
@@ -295,7 +299,7 @@ backfill() {
             fi
             git tag "$TAG_PREFIX$build" "$sha"
         fi
-        if [ ! -f "$(article_path "$build")" ]; then
+        if [ -n "$tagged" ] || [ ! -f "$(article_path "$build")" ]; then
             version=$(git show "$sha:project.yml" 2>/dev/null | sed -n 's/^ *MARKETING_VERSION: *//p' | head -1 | tr -d "\"'")
             if [ -n "$prev" ]; then
                 write_article "$build" "${version:-unknown}" "$(library_date "$epoch")" "$TAG_PREFIX$prev..$sha" "$prev"
