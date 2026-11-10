@@ -33,12 +33,14 @@ A task is done when every part of it as Michael stated it is built, merged and p
 
 **Keep these current as part of the change that alters behaviour, not as a later cleanup: the commit that changes how the app works updates the document that describes it.**
 
+**Every build carries its release notes, written from the commits.** Every commit subject is a Conventional Commit (Git practice, below). `Scripts/testflight.sh` tags each uploaded commit `build/<build number>` and, through `Scripts/release-notes.sh`, writes the build's article in the Library's Release notes section (`docs/release-notes/`) from the commits since the previous tag: each `feat` a line under New features, each `fix` a line under Fixes, and any other type one line, "Maintenance and performance improvements".
+
 **Constants live in code, nowhere else.** Every domain constant and model parameter sits on the type that uses it, with its value, unit, valid range and citation. There is no separate constants document to keep in step, so a constant can never be changed in prose without changing the value.
 
 ## Git practice
 
 - Small, logical commits: one coherent change per commit. Large commits need exceptional rationale (e.g. an atomic refactor) and should be rare.
-- Imperative, present-tense subject lines ≤ 72 chars ("Add tags to items"); the body explains why when the diff alone doesn't.
+- Every subject line is a Conventional Commit, `<type>: <summary>`, ≤ 72 characters in all, the summary imperative and present tense with a capital first letter ("feat: Add tags to items"); the body explains why when the diff alone doesn't. `feat` is a feature a tester can see or use and `fix` a fix a tester would notice: their summary becomes the build's release-note line as it stands, so it is written for the tester, in the app's own words, with no code in it. Everything else is `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `style` or `chore`, and shows only as "Maintenance and performance improvements". A scope is allowed (`fix(sync): ...`) and not shown; `chore(release)` is the release script's own. Merge commits keep git's default message.
 - Never mention AI tools in commit messages, PR text, code or comments; no Co-Authored-By trailers. The committer is fully responsible for the commit.
 - All commits are authored and committed with the identity in the repository's local git config (`git config user.name`, `git config user.email`). Set it once on a new checkout; any tool making commits uses it for both author and committer, with no separate tool attribution.
 - **Always push.** Once the repository has a remote, every commit is pushed to `origin` as soon as it is made, without being asked. Michael works across several environments, so an unpushed commit is a broken hand-off.
@@ -100,7 +102,8 @@ See `STYLE_GUIDE.md` for the prose rules, which apply to all writing. The rules 
     - `Scripts/sim-shot.sh <udid> <app> <out.png> [launch args]`: install, launch and screenshot headlessly. Launch arguments are listed in `App/Sources/Debug/LaunchOptions.swift`.
     - `Scripts/make-icon.sh`: rebuild the app icon from `design/icon/` into both asset catalogues.
     - `Scripts/cloudkit-schema.sh`: import the CloudKit schema into Development.
-    - `Scripts/testflight.sh`: archive and upload to TestFlight. It reads the App Store Connect key from `~/.scaffold-asc.env`, falling back to `~/.asc.env`.
+    - `Scripts/testflight.sh`: archive and upload to TestFlight, with the build's release notes. It reads the App Store Connect key from `~/.scaffold-asc.env`, falling back to `~/.asc.env`. On its first run with no build tag it first writes the release notes of every earlier build, from the builds App Store Connect lists.
+    - `Scripts/release-notes.sh preview`: the release notes the next build will carry. `backfill` writes those of earlier builds (see the script's header).
 
 ## Verification is headless, always
 

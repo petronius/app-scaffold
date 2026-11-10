@@ -8,7 +8,7 @@ Read first: `CLAUDE.md`, `SPEC.md`, `STYLE_GUIDE.md`, and `spec/DESIGN-STYLE.md`
 
 - **Scope.** Build your task file in full, nothing else. A problem you notice outside it goes in your final report, not in your diff. Never narrow the task; it is done when every item is built, tested, merged and pushed.
 - **Shell.** Keep each shell command short and single-purpose: one command per call, no long `&&` chains or multi-line scripts in the shell. Write files with the file tools, so commands do not stop for approval.
-- **Commits.** Small and logical, imperative subject ≤ 72 characters, body says why. Author and committer are the repository's local git identity (`git config user.email`). Never mention AI tools; no Co-Authored-By trailer. Every commit to `main` is pushed once the repository has a remote.
+- **Commits.** Small and logical, a Conventional Commit subject ≤ 72 characters (`feat: Add tags to items`; `CLAUDE.md`, "Git practice"), body says why. Author and committer are the repository's local git identity (`git config user.email`). Never mention AI tools; no Co-Authored-By trailer. Every commit to `main` is pushed once the repository has a remote.
 - **Copy.** Every string a user reads is a row in `Copy/copy.tsv`, then `Scripts/gen-copy.sh`; commit both. On a merge conflict in the table, keep both sides' rows and regenerate.
 - **Formatting.** Figures become text only through `AppText.Format`. Add a function there if one is missing.
 - **Constants.** Every constant sits on the type that uses it, with value, unit, valid range and citation, and every citation has its `references/` entry in the same commit.
@@ -19,6 +19,7 @@ Read first: `CLAUDE.md`, `SPEC.md`, `STYLE_GUIDE.md`, and `spec/DESIGN-STYLE.md`
 - **Simulators and builds.** Use your own derived-data path `/private/tmp/scaffold-dd-<NNN>` and, for UI work, your own simulator: `xcrun simctl create bgbuild-<NNN> "iPhone 17 Pro" <runtime>` (`xcrun simctl list runtimes` lists them). Never open Simulator.app; screenshots go through `Scripts/sim-shot.sh`. Delete the device and the derived data before you finish, on every exit path.
 - **Screens.** A unit that builds a screen checks it with headless screenshots on iPhone and iPad, in light and dark, at the largest Dynamic Type size, against `SPEC.md` and any mockup in `design/mockups/`, and iterates until it matches and looks finished. Add DEBUG launch arguments (`App/Sources/Debug/LaunchOptions.swift`) to reach any state you need.
 - **Docs.** A unit that adds or changes a system writes or updates its Library article in `docs/` in the same commit as the behaviour.
+- **Release notes.** A change a tester can notice is committed as `feat` or `fix`, its summary written for the tester: it becomes the build's release-note line.
 - **Conflicts.** Shared files (`project.yml`, `Core/Package.swift`, `Copy/copy.tsv`, `references/README.md`, `docs/README.md`, `Scripts/cloudkit-schema.ckdb`) take additive edits; when merging `main`, keep both sides.
 - **Final report.** What landed (commits on `main`), how it was verified (tests, screenshots), and findings outside your scope. Nothing may be left unfinished.
 

@@ -2,22 +2,20 @@
 # testflight.sh [--archive-only]: archive Scaffold (phone app, watch app,
 # complication and widget) for Release and upload it to TestFlight.
 #
-# Authentication uses an App Store Connect API key with Admin access (cloud
-# signing mints the distribution certificate, which an App Manager key may
-# not do). The key is the team's, so one key serves every app. The script
-# reads it from the first of these files that exists, never from the
-# repository:
-#
-#   $SCAFFOLD_ASC_ENV
-#   ~/.scaffold-asc.env
-#   ~/.asc.env
-#
-# The file exports ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the
-# AuthKey_*.p8 file, kept outside the repository). Variables already set in
-# the environment win.
+# Authentication uses the team's App Store Connect API key, which
+# Scripts/asc-env.sh reads (see its header).
 #
 # The build number is a UTC timestamp, so every upload is unique and strictly
 # increasing. The marketing version comes from project.yml.
+#
+# Every upload carries its release notes (Scripts/release-notes.sh): the
+# commits since the last build tag become the build's article in the
+# Library's Release notes section before the archive, so the build bundles
+# them, and after a successful upload the built commit is tagged
+# build/<build number> and the article committed and pushed. A failed
+# archive or upload takes the article back out. With no build tag yet, the
+# release notes of every earlier build are written first, from the builds
+# App Store Connect lists.
 #
 # `--archive-only` archives and signs for Release and stops before the upload,
 # to check signing and the App IDs without sending a build.
@@ -30,28 +28,23 @@ cd "$(dirname "$0")/.."
 ARCHIVE_ONLY=0
 if [ "${1:-}" = "--archive-only" ]; then ARCHIVE_ONLY=1; fi
 
-if [ -z "${ASC_KEY_ID:-}" ]; then
-    for candidate in "${SCAFFOLD_ASC_ENV:-}" "$HOME/.scaffold-asc.env" "$HOME/.asc.env"; do
-        if [ -n "$candidate" ] && [ -f "$candidate" ]; then
-            echo "==> Reading the App Store Connect key settings from $candidate"
-            # shellcheck disable=SC1090
-            source "$candidate"
-            break
-        fi
-    done
+# shellcheck source=Scripts/asc-env.sh
+source Scripts/asc-env.sh
+
+if [ "$ARCHIVE_ONLY" -eq 0 ]; then
+    git fetch -q --tags origin || echo "!!  Could not fetch the build tags from origin." >&2
+    if ! Scripts/release-notes.sh has-builds; then Scripts/release-notes.sh backfill; fi
+    Scripts/release-notes.sh preview
 fi
-
-: "${ASC_KEY_ID:?set ASC_KEY_ID (see the header of this script)}"
-: "${ASC_ISSUER_ID:?set ASC_ISSUER_ID}"
-: "${ASC_KEY_PATH:?set ASC_KEY_PATH to the AuthKey_*.p8 file}"
-
-# xcodebuild demands an absolute path to the key.
-ASC_KEY_PATH="$(cd "$(dirname "$ASC_KEY_PATH")" && pwd)/$(basename "$ASC_KEY_PATH")"
-[ -f "$ASC_KEY_PATH" ] || { echo "!!  key not found at $ASC_KEY_PATH" >&2; exit 1; }
 
 BUILD=$(date -u +%Y%m%d%H%M)
 WORK=$(mktemp -d)
-trap 'rm -rf "$WORK"' EXIT
+STAMPED=0
+cleanup() {
+    if [ "$STAMPED" -eq 1 ]; then Scripts/release-notes.sh unstamp "$BUILD"; fi
+    rm -rf "$WORK"
+}
+trap cleanup EXIT
 ARCHIVE="$WORK/Scaffold.xcarchive"
 # A derived-data path of our own, thrown away with $WORK: the shared default
 # can carry build descriptions from earlier project shapes.
@@ -59,6 +52,12 @@ DERIVED="$WORK/DerivedData"
 
 echo "==> Regenerating project"
 xcodegen generate --quiet
+
+if [ "$ARCHIVE_ONLY" -eq 0 ]; then
+    VERSION=$(sed -n 's/^ *MARKETING_VERSION: *//p' project.yml | head -1 | tr -d "\"'")
+    Scripts/release-notes.sh stamp "$BUILD" "$VERSION"
+    STAMPED=1
+fi
 
 echo "==> Archiving (Release, build $BUILD)"
 set +e
@@ -104,6 +103,10 @@ if [ "$EXPORT_STATUS" -ne 0 ]; then
     echo "    and an API key with Admin access." >&2
     exit "$EXPORT_STATUS"
 fi
+
+STAMPED=0
+Scripts/release-notes.sh publish "$BUILD" \
+    || echo "!!  Build $BUILD is uploaded, but its release notes were not committed. Commit them by hand." >&2
 
 echo "==> Submitted build $BUILD. Apple processes it for 10 to 60 min; it then"
 echo "    appears on the app's TestFlight tab."
