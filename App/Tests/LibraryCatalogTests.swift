@@ -7,6 +7,9 @@ import Testing
 /// `ArticleID("…")` in the sources names a bundled file.
 struct LibraryCatalogTests {
     static let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    /// The section `Scripts/release-notes.sh` writes, one article per
+    /// TestFlight build, reached from the index alone.
+    static let releaseNotes = "release-notes"
     let catalog = LibraryCatalog(docsDirectory: root.appending(path: "docs"))
 
     @Test func theAppBundlesTheLibrary() {
@@ -34,8 +37,20 @@ struct LibraryCatalogTests {
         let linked = Set(catalog.entries.flatMap { entry in
             Self.links(in: entry.article).compactMap { ArticleID(link: $0, from: entry.id) }.filter { $0 != entry.id }
         })
-        for entry in catalog.entries {
+        for entry in catalog.entries where entry.id.folder != Self.releaseNotes {
             #expect(linked.contains(entry.id), "\(entry.id) is linked from no other article's Related section")
+        }
+    }
+
+    /// A build's release notes hold New features, Fixes and Other changes,
+    /// or some of them, and nothing else (`spec/DOCS-STYLE.md`, "Release notes").
+    @Test func releaseNotesHoldOnlyTheirLists() {
+        for entry in catalog.entries where entry.id.folder == Self.releaseNotes {
+            let headings = entry.article.sections.map(\.heading)
+            #expect(!headings.isEmpty, "\(entry.id) holds no notes")
+            for heading in headings {
+                #expect(["New features", "Fixes", "Other changes"].contains(heading ?? ""), "\(entry.id) has a section \(heading ?? "without a heading")")
+            }
         }
     }
 

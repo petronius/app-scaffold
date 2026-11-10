@@ -93,11 +93,21 @@ Keep a diagram under 12 lines and 50 characters wide, so it fits the phone's wid
 
 A long section is split into groups with `###` headings in the index, each a few related articles under a short plain title. The in-app list shows each group as a list section under the section's title. Groups exist only in the index: the articles stay in their section folder, and a section is grouped throughout or not at all.
 
+## Release notes
+
+The `release-notes` section is written by a script from the git history, and most rules above do not apply to it. It holds one article per TestFlight build, `build-<build number>.md`, which `Scripts/testflight.sh` writes when it uploads the build (`Scripts/release-notes.sh`), from the commits since the build before. Nobody writes one by hand; a wrong line is corrected in place.
+
+- The title is "Build" and the build number, the number About shows. The summary is one sentence: the version and the date of the upload.
+- Then `## New features`, one line per `feat` commit; `## Fixes`, one line per `fix` commit; and `## Other changes`, holding the one line "Maintenance and performance improvements" when the build has any other commit. A heading with nothing under it is left out, and nothing else follows.
+- No In this app, Related or Sources, and no length or linking rules: the index lists every build under its last heading, newest first, and that is how a reader finds one.
+- A line is the commit's summary as written, so a `feat` or `fix` subject follows the Language rules above: what a tester can now do or will see differently, never how the code changed (`CLAUDE.md`, "Git practice").
+
 ## Keeping it current
 
 - The commit that changes how the app works changes the app article that describes it. There is no later documentation pass.
 - Adding a system adds an app article, a line in `README.md`, and Related links from the articles it touches.
 - Removing a system removes its article and every link to it in the same commit.
+- A change a tester can notice is committed as `feat` or `fix`, its subject written for the tester (Release notes, above).
 - Before committing, read the article once as a reader would: one question in mind, scanning headings. If the answer is not findable in under a minute, restructure before adding words.
 
 ## Checklist
