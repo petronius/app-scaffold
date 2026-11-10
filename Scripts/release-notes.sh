@@ -37,10 +37,12 @@
 #       The notes for builds uploaded before the tags: one line per build,
 #       "<build number> <upload time in seconds since 1970>", read from the
 #       file, from stdin with "-", or fetched from App Store Connect
-#       (Scripts/asc-builds.sh) with no argument. Each build is tagged at the
-#       last commit on main before it was built: the build number's own UTC
-#       minute where the number is a timestamp, else its upload time. Then
-#       every build gets its article, and the commit and the tags are pushed.
+#       (Scripts/asc-builds.sh) with no argument. A build number that is a
+#       timestamp needs no upload time; the article then takes its date.
+#       Each build is tagged at the last commit on main before it was built:
+#       the build number's own UTC minute where the number is a timestamp,
+#       else its upload time. Then every build gets its article, and the
+#       commit and the tags are pushed.
 #
 # Written for the bash 3.2 and BSD tools macOS ships, and for Linux.
 set -euo pipefail
@@ -271,7 +273,11 @@ backfill() {
     list=$(printf '%s\n' "$list" | while read -r build epoch; do
         [ -n "$build" ] || continue
         when=$(build_epoch "$build")
-        echo "${when:-$epoch} $epoch $build"
+        if [ -z "${when:-$epoch}" ]; then
+            echo "!!  Build $build has no upload time and its number is not a time; left out." >&2
+            continue
+        fi
+        echo "${when:-$epoch} ${epoch:-$when} $build"
     done | sort -n -k1,1)
     if [ -z "$list" ]; then
         echo "==> No earlier builds."
