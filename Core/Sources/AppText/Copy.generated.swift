@@ -67,6 +67,9 @@ public enum Copy {
                 "About \(title)"
             }
         }
+        public enum releaseNotes {
+            public static let seeAll = "See all"
+        }
         public enum search {
             public static func empty(query: String) -> String {
                 "No articles match “\(query)”"

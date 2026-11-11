@@ -9,7 +9,7 @@ struct LibraryCatalogTests {
     static let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     /// The section `Scripts/release-notes.sh` writes, one article per
     /// TestFlight build, reached from the index alone.
-    static let releaseNotes = "release-notes"
+    static let releaseNotes = LibraryCatalog.Section.releaseNotesFolder
     let catalog = LibraryCatalog(docsDirectory: root.appending(path: "docs"))
 
     @Test func theAppBundlesTheLibrary() {
@@ -22,6 +22,32 @@ struct LibraryCatalogTests {
             #expect(!entry.summary.isEmpty, "\(entry.id) is missing from docs/README.md")
             #expect(entry.article.summary != nil, "\(entry.id) has no summary paragraph")
         }
+    }
+
+    /// With nothing searched the Library shows the newest three builds of
+    /// the Release notes, then "See all"; every other section whole.
+    @Test func theIndexShowsTheNewestReleaseNotes() {
+        for section in catalog.sections {
+            if section.isReleaseNotes {
+                let builds = section.entries.map(\.id.path)
+                #expect(builds == builds.sorted(by: >), "the index lists the builds newest first")
+                #expect(section.inIndex.entries.map(\.id) == Array(section.entries.prefix(3)).map(\.id))
+            } else {
+                #expect(section.inIndex == section, "\(section.folder) is cut in the index")
+            }
+        }
+    }
+
+    @Test func theIndexCutsReleaseNotesToThree() {
+        let builds = ["build-5", "build-4", "build-3", "build-2", "build-1"]
+        let index = "## Release notes\n\n" + builds.map { "- [\($0)](release-notes/\($0).md): Uploaded" }.joined(separator: "\n")
+        let articles = Dictionary(uniqueKeysWithValues: builds.map {
+            (ArticleID("release-notes/\($0)"), "# \($0)\n\nVersion 0.1.0.\n")
+        })
+        let section = LibraryCatalog(index: index, articles: articles).sections.first
+        #expect(section?.entries.count == 5)
+        #expect(section?.inIndex.entries.map(\.id.path)
+                == ["release-notes/build-5", "release-notes/build-4", "release-notes/build-3"])
     }
 
     @Test func everyLinkBetweenArticlesResolves() {

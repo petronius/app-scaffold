@@ -99,7 +99,7 @@ The `release-notes` section is written by a script from the git history, and mos
 
 - The title is "Build" and the build number, the number About shows. The summary is one sentence: the version and the date of the upload.
 - Then `## New features`, one line per `feat` commit; `## Fixes`, one line per `fix` commit; and `## Other changes`, holding the one line "Maintenance and performance improvements" when the build has any other commit. A heading with nothing under it is left out, and nothing else follows.
-- No In this app, Related or Sources, and no length or linking rules: the index lists every build under its last heading, newest first, and that is how a reader finds one.
+- No In this app, Related or Sources, and no length or linking rules: the index lists every build under its last heading, newest first, and that is how a reader finds one. The Library shows the newest three there, then "See all", which opens the list of every build.
 - A line is the commit's summary as written, so a `feat` or `fix` subject follows the Language rules above: what a tester can now do or will see differently, never how the code changed (`CLAUDE.md`, "Git practice").
 
 ## Keeping it current

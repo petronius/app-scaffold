@@ -40,6 +40,7 @@ about.version	Version		Settings, About
 about.build	Build		Settings, About
 library.search.label	Search the Library		Accessibility label of the Library search field
 library.search.placeholder	Search		Library search field prompt
+library.releaseNotes.seeAll	See all		Library: under the newest three builds of the Release notes; opens the list of every build
 library.search.empty	No articles match “{query}”	query:String	Library with a search that matches nothing
 library.article.missing	This article is not in this build.		An article link to a file the app does not bundle
 library.info.label	About {title}	title:String	Accessibility label of an InfoButton

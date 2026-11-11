@@ -27,6 +27,22 @@ struct LibraryCatalog {
         var entries: [Entry]
         var id: String { folder }
 
+        /// The section `Scripts/release-notes.sh` writes: one article per
+        /// TestFlight build, which the index lists newest first.
+        static let releaseNotesFolder = "release-notes"
+        /// How many builds the Library shows before "See all".
+        static let releaseNotesInIndex = 3
+
+        var isReleaseNotes: Bool { folder == Self.releaseNotesFolder }
+
+        /// The section as the Library lists it with nothing searched: the
+        /// newest builds of the Release notes, any other section whole.
+        /// "See all" opens the whole Release notes.
+        var inIndex: Section {
+            guard isReleaseNotes else { return self }
+            return Section(folder: folder, entries: Array(entries.prefix(Self.releaseNotesInIndex)))
+        }
+
         /// The folder name read as a heading in sentence case:
         /// `devices-and-sync` reads "Devices and sync".
         var title: String {
