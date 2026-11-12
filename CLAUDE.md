@@ -46,6 +46,15 @@ A task is done when every part of it as Michael stated it is built, merged and p
 - **Always push.** Once the repository has a remote, every commit is pushed to `origin` as soon as it is made, without being asked. Michael works across several environments, so an unpushed commit is a broken hand-off.
 - Don't commit build products, the generated Xcode project or Xcode user state (see `.gitignore`).
 
+## GitHub issues
+
+Issues carry two labels and no others:
+
+- **`draft`**, grey: an idea or a deferred feature still being shaped. Nothing is built from it.
+- **`ready for development`**, green: specified well enough to build as it stands.
+
+No other label is created, by hand or by a tool. `Scripts/gh-labels.sh` sets the two on the repository and deletes every other label; it runs once on every new repository, and again whenever a label has crept in.
+
 ## Merging branches: merge when green, no locks
 
 Parallel units build in their own worktree on `bgbuild/<NNN>-<slug>` and are merged as soon as they are ready. There is **no merge lock**: do not create one, wait on one, or check for one.
