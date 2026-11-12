@@ -31,6 +31,10 @@
 #       After a successful upload: tags HEAD build/<build>, commits the
 #       article and the index as `chore(release)`, and pushes both. A failure
 #       here never fails the upload; it says what to do by hand.
+#   release-notes.sh rewrite <build>
+#       Writes an uploaded build's article again from the commits between its
+#       tag and the build tag before it, keeping its version and date. For
+#       an article written from the wrong range.
 #   release-notes.sh has-builds
 #       Succeeds when at least one build tag exists.
 #   release-notes.sh backfill [<file>|-]
@@ -93,6 +97,39 @@ article_path() { echo "$FOLDER/build-$1.md"; }
 # The latest build tag HEAD contains, by build number.
 last_build_tag() {
     git tag --merged HEAD --list "${TAG_PREFIX}*" | sed "s|^$TAG_PREFIX||" | sort -n | tail -1 | sed "s|^|$TAG_PREFIX|"
+}
+
+# The latest build tag before a build that its own tag contains.
+previous_build_tag() {
+    git tag --merged "$TAG_PREFIX$1" --list "${TAG_PREFIX}*" | sed "s|^$TAG_PREFIX||" \
+        | awk -v b="$1" '$0 + 0 < b + 0' | sort -n | tail -1 | sed "s|^|$TAG_PREFIX|"
+}
+
+# A build tag HEAD does not contain because the history was rewritten (the
+# same commits under new shas, as when their author was corrected) moves to
+# its twin on HEAD's history, matched by author date, commit date and
+# subject, here and on origin. Without this every such tag is lost to the
+# range, and the next build lists the whole history. A tag with no twin, a
+# build cut from a branch never merged, stays where it is.
+heal_tags() {
+    local stale="" tag index key new
+    for tag in $(git tag -l "${TAG_PREFIX}*"); do
+        git merge-base --is-ancestor "$tag" HEAD 2>/dev/null || stale="$stale $tag"
+    done
+    [ -n "$stale" ] || return 0
+    index=$(git log --format='%at %ct %s%x09%H' HEAD)
+    for tag in $stale; do
+        key=$(git log -1 --format='%at %ct %s' "$tag^{commit}")
+        new=$(printf '%s\n' "$index" | awk -F'\t' -v k="$key" '$1 == k { print $2; exit }')
+        [ -n "$new" ] || continue
+        git tag -f "$tag" "$new" >/dev/null
+        if git push -q --force origin "refs/tags/$tag" 2>/dev/null; then
+            echo "==> Moved $tag to the rewritten history" >&2
+        else
+            echo "!!  Moved $tag to the rewritten history here, but could not push it:" >&2
+            echo "    git push --force origin refs/tags/$tag" >&2
+        fi
+    done
 }
 
 # One line per counted commit in a range, oldest first: kind (feat, fix,
@@ -212,6 +249,7 @@ push_head() {
 
 preview() {
     local tag range rows
+    heal_tags
     tag=$(last_build_tag)
     if [ -n "$tag" ]; then range="$tag..HEAD"; else range="HEAD"; fi
     rows=$(classify "$range")
@@ -224,12 +262,28 @@ preview() {
 stamp() {
     local build="$1" version="$2" tag range
     [ ! -f "$(article_path "$build")" ] || die "$(article_path "$build") exists already"
+    heal_tags
     tag=$(last_build_tag)
     if [ -n "$tag" ]; then range="$tag..HEAD"; else range="HEAD"; fi
     [ -n "$(classify "$range")" ] || die "Nothing has been committed since $tag, so build $build would carry no release notes."
     write_article "$build" "$version" "$(library_date)" "$range" ""
     write_index
     echo "==> Release notes for build $build written to $(article_path "$build")"
+}
+
+rewrite() {
+    local build="$1" article version date prev range
+    article=$(article_path "$build")
+    [ -f "$article" ] || die "$article does not exist"
+    git rev-parse -q --verify "refs/tags/$TAG_PREFIX$build" >/dev/null || die "no tag $TAG_PREFIX$build"
+    heal_tags
+    version=$(sed -n '3s/^Version \(.*\), uploaded to TestFlight on .*\.$/\1/p' "$article")
+    date=$(sed -n '3s/^Version .*, uploaded to TestFlight on \(.*\)\.$/\1/p' "$article")
+    prev=$(previous_build_tag "$build")
+    if [ -n "$prev" ]; then range="$prev..$TAG_PREFIX$build"; else range="$TAG_PREFIX$build"; fi
+    write_article "$build" "$version" "$date" "$range" "${prev#$TAG_PREFIX}"
+    write_index
+    echo "==> Release notes for build $build written again from ${prev:-the first commit}..$TAG_PREFIX$build"
 }
 
 unstamp() {
@@ -340,7 +394,11 @@ case "${1:-}" in
         [ $# -eq 2 ] || die "usage: $0 publish <build>"
         publish "$2"
         ;;
+    rewrite)
+        [ $# -eq 2 ] || die "usage: $0 rewrite <build>"
+        rewrite "$2"
+        ;;
     has-builds) git tag -l "${TAG_PREFIX}*" | grep -q . ;;
     backfill) backfill "${2:-}" ;;
-    *) die "usage: $0 preview | stamp <build> <version> | unstamp <build> | publish <build> | has-builds | backfill [<file>|-]" ;;
+    *) die "usage: $0 preview | stamp <build> <version> | unstamp <build> | publish <build> | rewrite <build> | has-builds | backfill [<file>|-]" ;;
 esac
