@@ -55,6 +55,11 @@ Issues carry two labels and no others:
 
 No other label is created, by hand or by a tool. `Scripts/gh-labels.sh` sets the two on the repository and deletes every other label; it runs once on every new repository, and again whenever a label has crept in.
 
+Working on issues:
+
+- **Asked to look at the open issues, take only those labelled `ready for development`.** A `draft` issue, or one with no label, is not work to pick up unless Michael names it.
+- **An issue is done when it is built, merged and closed.** Build it under the rules here, say `Closes #<number>` in the body of the commit that finishes it, merge to `main` and push, then close the issue as completed if the push has not already closed it.
+
 ## Merging branches: merge when green, no locks
 
 Parallel units build in their own worktree on `bgbuild/<NNN>-<slug>` and are merged as soon as they are ready. There is **no merge lock**: do not create one, wait on one, or check for one.
@@ -99,7 +104,7 @@ See `STYLE_GUIDE.md` for the prose rules, which apply to all writing. The rules 
 
 ## Build & run
 
-- **Some environments have no Swift/Xcode toolchain and cannot compile, run, or test.** When that is the case, write the change carefully by inspection, note any genuinely risky spot once, and move on. Do not repeatedly flag the missing toolchain or hedge every paragraph with it: the build and tests are run locally.
+- **Michael builds and tests on his Mac.** An environment without the Swift/Xcode toolchain, or without another development tool, is known and expected: write the change carefully by inspection and carry on. Never warn about the missing toolchain or tool, in a reply, a commit or a PR.
 - Simulator builds are signed ad hoc (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual`, as `Scripts/build.sh` does), never `CODE_SIGNING_ALLOWED=NO`: an unsigned build carries no entitlements, and CloudKit traps at launch without the iCloud one.
 - The Xcode project is generated: `xcodegen generate` (`project.yml` is the source of truth; `Scaffold.xcodeproj`, the `Info.plist` files and the entitlements files are gitignored and rewritten on every generate).
 - The shared code is a Swift package with its own tests, runnable without a simulator: `Core/` (`AppCore` the models and sync rules, `AppText` formatting and the generated copy, `AppData` the store, `AppSync` the CloudKit sync).
